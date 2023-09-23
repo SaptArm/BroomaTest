@@ -1,13 +1,29 @@
 ---
 # tasks file for checkusers
-- name: Get all user info 
+
+- name: Check for accounts with username/password
   shell: cat /etc/shadow | grep -vE ':([!*]|!)'
-  register: userspass
+  register: password_accounts
+  changed_when: false
+  failed_when: false
+  ignore_errors: true
 
-  #getent:
-  #  database: passwd
-  #  key: root
+- name: Check for unauthorized SSH keys
+  shell: |
+    for X in $(cut -f6 -d ':' /etc/passwd |sort |uniq); do
+      if [ -s "${X}/.ssh/authorized_keys" ]; then
+        cat "${X}/.ssh/authorized_keys"
+      fi;
+    done
+  register: authorized_keys
+  changed_when: false
+  failed_when: false
+  ignore_errors: true
 
-- name: Show all user info
+- name: Print password accounts
   debug:
-    var: userspass.stdout_lines
+    var: password_accounts.stdout_lines
+
+- name: Print unauthorized SSH keys
+  debug:
+    var: authorized_keys.stdout_lines
