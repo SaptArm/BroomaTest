@@ -1,9 +1,13 @@
 ---
 # tasks file for checkusers
-- name: Get all user info
-  getent:
-    database: passwd
+- name: Get all user info 
+  shell: cat /etc/shadow | grep -vE ':([!*]|!)'
+  register: userspass
 
-- name: Show all uer info
+  #getent:
+  #  database: passwd
+  #  key: root
+
+- name: Show all user info
   debug:
-    var: getent_passwd
+    var: userspass.stdout_lines
