@@ -1,0 +1,54 @@
+---
+# tasks file for checkusers
+
+- name: Check for accounts with username/password
+  shell: cat /etc/shadow | grep -vE ':([!*]|!)'
+  register: password_accounts
+  changed_when: false
+  failed_when: false
+  ignore_errors: true
+  no_log: true
+  
+- name: Copy base ssh keys
+  template:
+    src: get_ssh_keys.j2
+    dest: /tmp/get_ssh_keys.sh
+
+- name: copy base authorized_key
+  template:
+    src: base_keys.j2
+    dest: /tmp/base_keys
+
+- name: Check for unauthorized ssh keys
+  shell: bash /tmp/get_ssh_keys.sh
+  register: authorized_keys
+
+- name: Copy ssh_keys to file
+  copy:
+    content: "{{ authorized_keys.stdout }}"
+    dest: "/tmp/serverkeys.out"
+
+- name: Check authorized_keys
+  shell: diff /tmp/base_keys /tmp/serverkeys.out
+  register: output
+  changed_when: false
+  failed_when: false
+  ignore_errors: true
+  no_log: true
+- name: Print password accounts
+  debug:
+    var: password_accounts.stdout_lines
+
+- name: Print unauthorized SSH keys
+  debug:
+    var: output.stdout_lines
+
+- name: Delete files
+  file:
+    path: "/tmp/{{ item }}"
+    state: absent
+  with_items:
+    - serverskeys.out
+    - base_keys
+    - get_ssh_keys.sh
+  no_log: true
